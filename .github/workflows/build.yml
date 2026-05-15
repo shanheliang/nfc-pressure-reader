@@ -23,20 +23,23 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
+    - name: Generate Release Keystore
+      run: |
+        keytool -genkeypair -v \
+          -keystore app/release.keystore \
+          -alias nfcreader \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass nfcreader \
+          -keypass nfcreader \
+          -dname "CN=NFC Reader, OU=Dev, O=ShanheLiang, L=Shenzhen, ST=Guangdong, C=CN"
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
-
-    - name: Build Release APK
+    - name: Build Release APK (signed)
       run: ./gradlew assembleRelease
-
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: debug-apk
-        path: app/build/outputs/apk/debug/*.apk
 
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
