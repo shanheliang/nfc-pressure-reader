@@ -23,9 +23,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nfcpressure.app.data.CalibrationData
 import com.nfcpressure.app.data.HistoryItem
-import com.nfcpressure.app.data.PressureData
 import com.nfcpressure.app.ui.components.*
 import com.nfcpressure.app.ui.theme.*
 import com.nfcpressure.app.viewmodel.UiState
