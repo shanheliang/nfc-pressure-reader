@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NFC压力监测</string>
+    
+    <!-- 主界面 -->
+    <string name="hint_place_phone">将手机贴近NFC标签</string>
+    <string name="hint_place_phone_desc">确保手机NFC天线区域对准传感器卡片</string>
+    <string name="pressure_value">压力值</string>
+    <string name="unit_mmhg">mmHg</string>
+    <string name="adc_value">ADC原始值</string>
+    <string name="fsr_resistance">FSR阻值</string>
+    <string name="unit_ohm">Ω</string>
+    <string name="unit_kohm">kΩ</string>
+    <string name="signal_status">信号状态</string>
+    <string name="status_valid">数据有效</string>
+    <string name="status_invalid">数据无效</string>
+    <string name="status_sampling">正在采样</string>
+    <string name="status_unknown">未知</string>
+    
+    <!-- 校准 -->
+    <string name="calibration">校准</string>
+    <string name="calibration_title">压力校准</string>
+    <string name="calibration_zero">设置零点</string>
+    <string name="calibration_zero_desc">移除所有压力后点击此按钮</string>
+    <string name="calibration_reference">设置参考点</string>
+    <string name="calibration_reference_desc">施加已知压力(建议40mmHg)后点击</string>
+    <string name="calibration_reference_value">参考压力值</string>
+    <string name="calibration_reset">重置校准</string>
+    <string name="calibration_saved">校准已保存</string>
+    <string name="calibration_reset_confirm">确定要重置校准数据吗？</string>
+    <string name="calibration_hint">请先设置零点，再设置参考点</string>
+    
+    <!-- 历史记录 -->
+    <string name="history">历史记录</string>
+    <string name="history_empty">暂无历史记录</string>
+    <string name="history_clear">清除记录</string>
+    
+    <!-- 错误提示 -->
+    <string name="error_nfc_not_supported">当前设备不支持NFC功能</string>
+    <string name="error_nfc_disabled">请在设置中开启NFC功能</string>
+    <string name="error_tag_lost">连接丢失，请重新贴近</string>
+    <string name="error_read_failed">读取失败，请重试</string>
+    <string name="error_checksum">数据校验失败</string>
+    
+    <!-- 按钮 -->
+    <string name="btn_read">读取</string>
+    <string name="btn_cancel">取消</string>
+    <string name="btn_confirm">确认</string>
+    <string name="btn_ok">确定</string>
+    
+    <!-- Tab -->
+    <string name="tab_monitor">监测</string>
+    <string name="tab_history">历史</string>
+    <string name="tab_settings">设置</string>
+</resources>
