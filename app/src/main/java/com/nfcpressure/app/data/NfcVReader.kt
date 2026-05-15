@@ -17,8 +17,8 @@ class NfcVReader {
         private const val CMD_READ_MULTIPLE_BLOCKS = 0x23.toByte()
         
         // ST25DV EEPROM块地址
-        const val BLOCK0_ADDR = 0x00  // 数据块
-        const val BLOCK1_ADDR = 0x01  // 校准参数块
+        const val BLOCK0_ADDR = 0x00.toByte()  // 数据块
+        const val BLOCK1_ADDR = 0x01.toByte()  // 校准参数块
     }
     
     /**

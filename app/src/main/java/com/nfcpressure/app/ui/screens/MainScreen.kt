@@ -59,8 +59,8 @@ fun MainScreen(
                 actions = {
                     // NFC状态指示
                     Icon(
-                        imageVector = if (uiState.isNfcEnabled) Icons.Default.SignalCellular4Bar 
-                                      else Icons.Default.SignalCellularOff,
+                        imageVector = if (uiState.isNfcEnabled) Icons.Default.Wifi 
+                                      else Icons.Default.WifiOff,
                         contentDescription = "NFC状态",
                         tint = if (uiState.isNfcEnabled) Color.White else Color.Gray,
                         modifier = Modifier.padding(end = 8.dp)
@@ -83,19 +83,19 @@ fun MainScreen(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     text = { Text("监测") },
-                    icon = { Icon(Icons.Default.Monitor, contentDescription = null) }
+                    icon = { Icon(Icons.Default.Dashboard, contentDescription = null) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     text = { Text("校准") },
-                    icon = { Icon(Icons.Default.Tune, contentDescription = null) }
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) }
                 )
                 Tab(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     text = { Text("历史") },
-                    icon = { Icon(Icons.Default.History, contentDescription = null) }
+                    icon = { Icon(Icons.Default.List, contentDescription = null) }
                 )
             }
             
@@ -151,7 +151,7 @@ private fun MonitorTab(uiState: UiState) {
             
             // NFC图标动画
             Icon(
-                imageVector = Icons.Default.Nfc,
+                imageVector = Icons.Default.NearMe,
                 contentDescription = null,
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -250,7 +250,7 @@ private fun MonitorTab(uiState: UiState) {
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.BatteryFull,
+                                imageVector = Icons.Default.BatteryStd,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
                                 tint = Color.Gray
@@ -265,7 +265,7 @@ private fun MonitorTab(uiState: UiState) {
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider()
+                    Divider()
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     // 详细数据

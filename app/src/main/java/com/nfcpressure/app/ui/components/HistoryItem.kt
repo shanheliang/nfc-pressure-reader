@@ -58,7 +58,7 @@ fun HistoryItemCard(
             // 数值和详情
             Column(modifier = Modifier.weight(1f)) {
                 Row(
-                    verticalAlignment = Alignment.Baseline
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = if (item.pressureMmHg < 0) "--" 
