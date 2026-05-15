@@ -26,16 +26,16 @@ import kotlin.math.sin
 
 /**
  * 圆形压力仪表盘组件
- * 显示范围 0-120 mmHg
+ * 显示范围 0-100 mmHg
  * 绿色区域: 0-30 mmHg
- * 黄色区域: 30-50 mmHg
- * 红色区域: 50+ mmHg
+ * 黄色区域: 30-60 mmHg
+ * 红色区域: 60-100 mmHg
  */
 @Composable
 fun PressureGauge(
     pressure: Float,
     modifier: Modifier = Modifier,
-    maxPressure: Float = 120f,
+    maxPressure: Float = 100f,
     showValue: Boolean = true
 ) {
     // 动画化压力值
@@ -52,7 +52,7 @@ fun PressureGauge(
     val gaugeColor = when {
         pressure < 0 -> GaugeBackground
         pressure <= 30 -> GaugeGreen
-        pressure <= 50 -> GaugeYellow
+        pressure <= 60 -> GaugeYellow
         else -> GaugeRed
     }
     
@@ -92,8 +92,8 @@ fun PressureGauge(
                     style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                 )
                 
-                // 绘制黄色区域 (30-50)
-                val yellowSweep = ((50f - 30f) / maxPressure) * 270f
+                // 绘制黄色区域 (30-60)
+                val yellowSweep = ((60f - 30f) / maxPressure) * 270f
                 drawArc(
                     color = GaugeYellow,
                     startAngle = 135f + greenSweep,
@@ -104,8 +104,8 @@ fun PressureGauge(
                     style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                 )
                 
-                // 绘制红色区域 (50-120)
-                val redSweep = ((maxPressure - 50f) / maxPressure) * 270f
+                // 绘制红色区域 (60-100)
+                val redSweep = ((maxPressure - 60f) / maxPressure) * 270f
                 drawArc(
                     color = GaugeRed,
                     startAngle = 135f + greenSweep + yellowSweep,
@@ -174,9 +174,8 @@ fun PressureGauge(
         ) {
             Text("0", fontSize = 12.sp, color = Color.Gray)
             Text("30", fontSize = 12.sp, color = GaugeGreen)
-            Text("50", fontSize = 12.sp, color = GaugeYellow)
-            Text("80", fontSize = 12.sp, color = GaugeRed)
-            Text("120", fontSize = 12.sp, color = GaugeRed)
+            Text("60", fontSize = 12.sp, color = GaugeYellow)
+            Text("100", fontSize = 12.sp, color = GaugeRed)
         }
     }
 }
@@ -192,7 +191,7 @@ fun MiniPressureGauge(
     val color = when {
         pressure < 0 -> Color.Gray
         pressure <= 30 -> GaugeGreen
-        pressure <= 50 -> GaugeYellow
+        pressure <= 60 -> GaugeYellow
         else -> GaugeRed
     }
     
@@ -212,7 +211,7 @@ fun MiniPressureGauge(
             )
             
             // 进度
-            val sweepAngle = (pressure.coerceIn(0f, 120f) / 120f) * 360f
+            val sweepAngle = (pressure.coerceIn(0f, 100f) / 100f) * 360f
             drawArc(
                 color = color,
                 startAngle = -90f,

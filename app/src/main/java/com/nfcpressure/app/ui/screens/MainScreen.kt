@@ -147,34 +147,57 @@ private fun MonitorTab(uiState: UiState) {
     ) {
         // 提示区域
         if (pressureData == null && !uiState.isReading) {
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            // NFC图标动画
-            Icon(
-                imageVector = Icons.Default.NearMe,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            // 仪表盘（显示0值，灰色指针）
+            PressureGauge(
+                pressure = -1f,
+                modifier = Modifier.size(220.dp)
             )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // 蓝色大圆角按钮
+            Button(
+                onClick = { /* 用户点击读取 */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2196F3) // 蓝色
+                )
+            ) {
+                Text(
+                    text = "读取NFC标签",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = Color.White
+                )
+            }
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Text(
-                text = "将手机贴近NFC标签",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
+            // 手机靠近NFC标签的提示图标
+            Icon(
+                imageVector = Icons.Default.PhoneAndroid,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
             )
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.weight(1f))
             
+            // 底部提示文字
             Text(
-                text = "确保手机NFC天线区域对准传感器卡片",
+                text = "将手机贴近NFC标签",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center
             )
             
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(16.dp))
         }
         
         // 读取中状态
@@ -204,126 +227,6 @@ private fun MonitorTab(uiState: UiState) {
                 pressure = pressureData.pressureMmHg,
                 modifier = Modifier.size(220.dp)
             )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // 数据详情卡片
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    // 状态行
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (pressureData.isValid) StatusValid 
-                                        else StatusInvalid
-                                    )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (pressureData.isValid) "数据有效" else "数据无效",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (pressureData.isValid) StatusValid else StatusInvalid
-                            )
-                        }
-                        
-                        // 电池指示
-                        val batteryText = when (pressureData.batteryIndicator) {
-                            1 -> "2.5V"
-                            2 -> "3.0V"
-                            3 -> "3.3V"
-                            else -> "未知"
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.BatteryStd,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = batteryText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Divider()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // 详细数据
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        DataItem(
-                            label = "ADC原始值",
-                            value = pressureData.adcRaw.toString(),
-                            suffix = "/4095"
-                        )
-                        DataItem(
-                            label = "FSR阻值",
-                            value = pressureData.formattedResistance,
-                            suffix = ""
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        DataItem(
-                            label = "ADC百分比",
-                            value = String.format("%.1f", pressureData.adcPercentage),
-                            suffix = "%"
-                        )
-                        DataItem(
-                            label = "力值",
-                            value = String.format("%.2f", pressureData.forceNewton),
-                            suffix = "N"
-                        )
-                    }
-                }
-            }
-            
-            // UID信息
-            uiState.rawData?.let { raw ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "标签UID: ${raw.uidHex}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-            
-            Spacer(modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-/**
- * 数据项
- */
-@Composable
 private fun DataItem(
     label: String,
     value: String,
