@@ -100,10 +100,6 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.updateNfcState(nfcAdapter?.isEnabled == true)
-        // 如果之前正在读取，恢复ReaderMode
-        if (viewModel.uiState.value.isReading) {
-            startReaderMode()
-        }
     }
     
     override fun onPause() {
@@ -116,25 +112,23 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
     
-    private fun startReaderMode() {
+    fun startReaderMode() {
         nfcAdapter?.let { adapter ->
             if (adapter.isEnabled && !readerModeEnabled) {
-                // FLAG_READER_NFC_V = ISO 15693
-                val flags = NfcAdapter.FLAG_READER_NFC_V or
-                        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
-                adapter.enableReaderMode(this, readerCallback, flags, null)
+                viewModel.startReading()
+                // FLAG_READER_NFC_V for ISO 15693 tags
+                adapter.enableReaderMode(this, readerCallback, NfcAdapter.FLAG_READER_NFC_V, null)
                 readerModeEnabled = true
-                viewModel.setReaderModeActive(true)
             }
         }
     }
     
-    private fun stopReaderMode() {
+    fun stopReaderMode() {
         nfcAdapter?.let { adapter ->
             if (readerModeEnabled) {
                 adapter.disableReaderMode(this)
                 readerModeEnabled = false
-                viewModel.setReaderModeActive(false)
+                viewModel.stopReading()
             }
         }
     }
