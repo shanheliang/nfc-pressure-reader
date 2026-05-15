@@ -152,7 +152,7 @@ private fun MonitorTab(uiState: UiState) {
             // 仪表盘（显示空状态）
             PressureGauge(
                 pressure = -1f,
-                modifier = Modifier.size(220.dp)
+                modifier = Modifier.size(260.dp)
             )
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -224,7 +224,7 @@ private fun MonitorTab(uiState: UiState) {
             // 仪表盘
             PressureGauge(
                 pressure = pressureData.pressureMmHg,
-                modifier = Modifier.size(220.dp)
+                modifier = Modifier.size(260.dp)
             )
             
             Spacer(modifier = Modifier.height(24.dp))

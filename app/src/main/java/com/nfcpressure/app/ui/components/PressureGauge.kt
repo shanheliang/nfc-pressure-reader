@@ -12,9 +12,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nfcpressure.app.ui.theme.GaugeBackground
@@ -25,7 +30,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * 圆形压力仪表盘组件
+ * 圆形压力仪表盘组件（带刻度和指针）
  * 显示范围 0-100 mmHg
  * 绿色区域: 0-30 mmHg
  * 黄色区域: 30-60 mmHg
@@ -38,116 +43,209 @@ fun PressureGauge(
     maxPressure: Float = 100f,
     showValue: Boolean = true
 ) {
-    // 动画化压力值
     val animatedPressure by animateFloatAsState(
         targetValue = pressure.coerceIn(0f, maxPressure),
         animationSpec = tween(durationMillis = 500),
         label = "pressureAnimation"
     )
-    
-    // 计算指针角度 (从-225°到45°，共270°范围)
-    val angle = (animatedPressure / maxPressure) * 270f - 225f
-    
-    // 确定颜色
+    val textMeasurer = rememberTextMeasurer()
+
     val gaugeColor = when {
         pressure < 0 -> GaugeBackground
         pressure <= 30 -> GaugeGreen
         pressure <= 60 -> GaugeYellow
         else -> GaugeRed
     }
-    
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(200.dp),
+            modifier = Modifier.size(260.dp),
             contentAlignment = Alignment.Center
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val strokeWidth = 20.dp.toPx()
-                val radius = (size.minDimension - strokeWidth) / 2
                 val center = Offset(size.width / 2, size.height / 2)
-                
-                // 绘制背景弧
+                val padding = 16.dp.toPx()
+
+                // 半径定义（从外到内）
+                val labelRadius = size.minDimension / 2 - padding
+                val tickOuterRadius = labelRadius - 12.dp.toPx()
+                val tickMajorLength = 12.dp.toPx()
+                val tickMinorLength = 6.dp.toPx()
+                val arcRadius = tickOuterRadius - tickMajorLength - 2.dp.toPx()
+                val arcStrokeWidth = 12.dp.toPx()
+                val needleLength = arcRadius - arcStrokeWidth / 2 - 8.dp.toPx()
+
+                // ===== 1. 绘制刻度数字 =====
+                val labelStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold)
+
+                for (v in listOf(0, 30, 60, 100)) {
+                    val canvasAngle = 135.0 + (v.toDouble() / maxPressure.toDouble()) * 270.0
+                    val angleRad = Math.toRadians(canvasAngle)
+
+                    val lx = center.x + labelRadius * cos(angleRad).toFloat()
+                    val ly = center.y + labelRadius * sin(angleRad).toFloat()
+
+                    val textColor = when {
+                        v <= 30 -> GaugeGreen
+                        v <= 60 -> GaugeYellow
+                        else -> GaugeRed
+                    }
+
+                    val textLayout = textMeasurer.measure(
+                        text = v.toString(),
+                        style = labelStyle.copy(color = textColor)
+                    )
+
+                    drawText(
+                        textLayoutResult = textLayout,
+                        topLeft = Offset(
+                            lx - textLayout.size.width / 2f,
+                            ly - textLayout.size.height / 2f
+                        )
+                    )
+                }
+
+                // ===== 2. 绘制刻度线 =====
+                for (v in 0..100 step 10) {
+                    val isMajor = v == 0 || v == 30 || v == 60 || v == 100
+                    val tickLen = if (isMajor) tickMajorLength else tickMinorLength
+                    val tickW = if (isMajor) 2.5f.dp.toPx() else 1.2f.dp.toPx()
+
+                    val canvasAngle = 135.0 + (v.toDouble() / maxPressure.toDouble()) * 270.0
+                    val angleRad = Math.toRadians(canvasAngle)
+
+                    val outerR = tickOuterRadius
+                    val innerR = tickOuterRadius - tickLen
+
+                    val tickColor = when {
+                        v < 30 -> if (isMajor) GaugeGreen else Color(0xFF999999)
+                        v == 30 -> GaugeYellow
+                        v < 60 -> if (isMajor) GaugeYellow else Color(0xFF999999)
+                        v == 60 -> GaugeRed
+                        else -> if (isMajor) GaugeRed else Color(0xFF999999)
+                    }
+
+                    drawLine(
+                        color = tickColor,
+                        start = Offset(
+                            center.x + innerR * cos(angleRad).toFloat(),
+                            center.y + innerR * sin(angleRad).toFloat()
+                        ),
+                        end = Offset(
+                            center.x + outerR * cos(angleRad).toFloat(),
+                            center.y + outerR * sin(angleRad).toFloat()
+                        ),
+                        strokeWidth = tickW,
+                        cap = StrokeCap.Round
+                    )
+                }
+
+                // ===== 3. 绘制弧线 =====
+                // 背景弧
                 drawArc(
                     color = GaugeBackground,
                     startAngle = 135f,
                     sweepAngle = 270f,
                     useCenter = false,
-                    topLeft = Offset(center.x - radius, center.y - radius),
-                    size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    topLeft = Offset(center.x - arcRadius, center.y - arcRadius),
+                    size = Size(arcRadius * 2, arcRadius * 2),
+                    style = Stroke(width = arcStrokeWidth, cap = StrokeCap.Round)
                 )
-                
-                // 绘制绿色区域 (0-30)
+
+                // 绿色区域 (0-30)
                 val greenSweep = (30f / maxPressure) * 270f
                 drawArc(
                     color = GaugeGreen,
                     startAngle = 135f,
                     sweepAngle = greenSweep,
                     useCenter = false,
-                    topLeft = Offset(center.x - radius, center.y - radius),
-                    size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    topLeft = Offset(center.x - arcRadius, center.y - arcRadius),
+                    size = Size(arcRadius * 2, arcRadius * 2),
+                    style = Stroke(width = arcStrokeWidth, cap = StrokeCap.Round)
                 )
-                
-                // 绘制黄色区域 (30-60)
+
+                // 黄色区域 (30-60)
                 val yellowSweep = ((60f - 30f) / maxPressure) * 270f
                 drawArc(
                     color = GaugeYellow,
                     startAngle = 135f + greenSweep,
                     sweepAngle = yellowSweep,
                     useCenter = false,
-                    topLeft = Offset(center.x - radius, center.y - radius),
-                    size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    topLeft = Offset(center.x - arcRadius, center.y - arcRadius),
+                    size = Size(arcRadius * 2, arcRadius * 2),
+                    style = Stroke(width = arcStrokeWidth, cap = StrokeCap.Round)
                 )
-                
-                // 绘制红色区域 (60-100)
+
+                // 红色区域 (60-100)
                 val redSweep = ((maxPressure - 60f) / maxPressure) * 270f
                 drawArc(
                     color = GaugeRed,
                     startAngle = 135f + greenSweep + yellowSweep,
                     sweepAngle = redSweep,
                     useCenter = false,
-                    topLeft = Offset(center.x - radius, center.y - radius),
-                    size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    topLeft = Offset(center.x - arcRadius, center.y - arcRadius),
+                    size = Size(arcRadius * 2, arcRadius * 2),
+                    style = Stroke(width = arcStrokeWidth, cap = StrokeCap.Round)
                 )
-                
-                // 绘制指针
-                if (pressure >= 0) {
-                    val pointerLength = radius - 30.dp.toPx()
-                    val pointerAngleRad = Math.toRadians(angle.toDouble())
-                    val pointerEnd = Offset(
-                        (center.x + pointerLength * cos(pointerAngleRad)).toFloat(),
-                        (center.y + pointerLength * sin(pointerAngleRad)).toFloat()
-                    )
-                    
-                    // 指针线
-                    drawLine(
-                        color = gaugeColor,
-                        start = center,
-                        end = pointerEnd,
-                        strokeWidth = 4.dp.toPx(),
-                        cap = StrokeCap.Round
-                    )
-                    
-                    // 指针圆点
-                    drawCircle(
-                        color = gaugeColor,
-                        radius = 8.dp.toPx(),
-                        center = center
-                    )
+
+                // ===== 4. 绘制指针 =====
+                val needleAngle = 135.0 + (animatedPressure.toDouble() / maxPressure.toDouble()) * 270.0
+                val needleRad = Math.toRadians(needleAngle)
+
+                // 指针尖端
+                val tipX = center.x + needleLength * cos(needleRad).toFloat()
+                val tipY = center.y + needleLength * sin(needleRad).toFloat()
+
+                // 指针底部宽度（垂直于指针方向）
+                val halfWidth = 5.dp.toPx()
+                val perpRad = needleRad + Math.PI / 2
+
+                val base1X = center.x + halfWidth * cos(perpRad).toFloat()
+                val base1Y = center.y + halfWidth * sin(perpRad).toFloat()
+                val base2X = center.x - halfWidth * cos(perpRad).toFloat()
+                val base2Y = center.y - halfWidth * sin(perpRad).toFloat()
+
+                // 指针尾部（反方向短尾）
+                val tailLength = 14.dp.toPx()
+                val tailX = center.x - tailLength * cos(needleRad).toFloat()
+                val tailY = center.y - tailLength * sin(needleRad).toFloat()
+
+                // 绘制指针（菱形：尖端→左侧→尾部→右侧）
+                val needlePath = Path().apply {
+                    moveTo(tipX, tipY)
+                    lineTo(base1X, base1Y)
+                    lineTo(tailX, tailY)
+                    lineTo(base2X, base2Y)
+                    close()
                 }
+                drawPath(
+                    path = needlePath,
+                    color = Color(0xFFE53935),
+                    style = Fill
+                )
+
+                // 中心盖（外圈深色）
+                drawCircle(
+                    color = Color(0xFF424242),
+                    radius = 10.dp.toPx(),
+                    center = center
+                )
+                // 中心盖（内圈浅色）
+                drawCircle(
+                    color = Color(0xFF9E9E9E),
+                    radius = 5.dp.toPx(),
+                    center = center
+                )
             }
-            
+
             // 显示数值
             if (showValue) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.offset(y = 20.dp)
+                    modifier = Modifier.offset(y = 30.dp)
                 ) {
                     Text(
                         text = if (pressure < 0) "--" else String.format("%.1f", pressure),
@@ -163,19 +261,6 @@ fun PressureGauge(
                     )
                 }
             }
-        }
-        
-        // 刻度标签
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("0", fontSize = 12.sp, color = Color.Gray)
-            Text("30", fontSize = 12.sp, color = GaugeGreen)
-            Text("60", fontSize = 12.sp, color = GaugeYellow)
-            Text("100", fontSize = 12.sp, color = GaugeRed)
         }
     }
 }
@@ -194,7 +279,7 @@ fun MiniPressureGauge(
         pressure <= 60 -> GaugeYellow
         else -> GaugeRed
     }
-    
+
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
@@ -202,15 +287,13 @@ fun MiniPressureGauge(
         Canvas(modifier = Modifier.size(40.dp)) {
             val strokeWidth = 6.dp.toPx()
             val radius = (size.minDimension - strokeWidth) / 2
-            
-            // 背景
+
             drawCircle(
                 color = GaugeBackground,
                 radius = radius,
                 style = Stroke(width = strokeWidth)
             )
-            
-            // 进度
+
             val sweepAngle = (pressure.coerceIn(0f, 100f) / 100f) * 360f
             drawArc(
                 color = color,
@@ -222,7 +305,7 @@ fun MiniPressureGauge(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
         }
-        
+
         Text(
             text = if (pressure < 0) "--" else "${pressure.toInt()}",
             fontSize = 10.sp,
