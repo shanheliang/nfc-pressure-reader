@@ -1,8 +1,6 @@
 package com.nfcpressure.app
 
-import android.app.PendingIntent
 import android.content.Intent
-import android.content.IntentFilter
 import android.nfc.NfcAdapter
 import android.nfc.Tag
 import android.os.Build
@@ -27,36 +25,20 @@ import com.nfcpressure.app.viewmodel.PressureViewModel
 class MainActivity : ComponentActivity() {
     
     private var nfcAdapter: NfcAdapter? = null
-    private lateinit var pendingIntent: PendingIntent
-    private lateinit var intentFilters: Array<IntentFilter>
     private lateinit var viewModel: PressureViewModel
+    private var readerModeEnabled = false
+    
+    private val readerCallback = NfcAdapter.ReaderCallback { tag ->
+        processTag(tag)
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        // Initialize ViewModel
         viewModel = ViewModelProvider(this)[PressureViewModel::class.java]
         
-        // Initialize NFC
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
-        
-        val intent = Intent(this, javaClass).apply {
-            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
-        pendingIntent = PendingIntent.getActivity(this, 0, intent, flags)
-        
-        val ndefFilter = IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED).apply {
-            try { addDataType("text/plain") } 
-            catch (e: IntentFilter.MalformedMimeTypeException) { e.printStackTrace() }
-        }
-        val techFilter = IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED)
-        intentFilters = arrayOf(ndefFilter, techFilter)
         
         setContent {
             NFCPressureAppTheme {
@@ -85,6 +67,8 @@ class MainActivity : ComponentActivity() {
                     ) {
                         MainScreen(
                             uiState = uiState,
+                            onStartReading = { startReaderMode() },
+                            onStopReading = { stopReaderMode() },
                             onSetZeroPoint = viewModel::setZeroPoint,
                             onSetReferencePoint = viewModel::setReferencePoint,
                             onResetCalibration = viewModel::resetCalibration,
@@ -116,21 +100,43 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.updateNfcState(nfcAdapter?.isEnabled == true)
-        nfcAdapter?.let { adapter ->
-            if (adapter.isEnabled) {
-                adapter.enableForegroundDispatch(this, pendingIntent, intentFilters, null)
-            }
+        // 如果之前正在读取，恢复ReaderMode
+        if (viewModel.uiState.value.isReading) {
+            startReaderMode()
         }
     }
     
     override fun onPause() {
         super.onPause()
-        nfcAdapter?.disableForegroundDispatch(this)
+        stopReaderMode()
     }
     
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)
+    }
+    
+    private fun startReaderMode() {
+        nfcAdapter?.let { adapter ->
+            if (adapter.isEnabled && !readerModeEnabled) {
+                // FLAG_READER_NFC_V = ISO 15693
+                val flags = NfcAdapter.FLAG_READER_NFC_V or
+                        NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
+                adapter.enableReaderMode(this, readerCallback, flags, null)
+                readerModeEnabled = true
+                viewModel.setReaderModeActive(true)
+            }
+        }
+    }
+    
+    private fun stopReaderMode() {
+        nfcAdapter?.let { adapter ->
+            if (readerModeEnabled) {
+                adapter.disableReaderMode(this)
+                readerModeEnabled = false
+                viewModel.setReaderModeActive(false)
+            }
+        }
     }
     
     private fun handleIntent(intent: Intent?) {
@@ -153,6 +159,8 @@ class MainActivity : ComponentActivity() {
     private fun processTag(tag: Tag) {
         if (tag.techList.any { it.contains("NfcV") }) {
             viewModel.handleNfcTag(tag)
+            // 读到数据后自动停止ReaderMode
+            stopReaderMode()
         } else {
             Toast.makeText(this, "不支持的NFC标签类型，请使用ISO 15693标签", Toast.LENGTH_SHORT).show()
         }

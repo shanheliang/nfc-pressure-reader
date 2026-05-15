@@ -18,8 +18,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.LocalTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nfcpressure.app.data.CalibrationData
 import com.nfcpressure.app.data.HistoryItem
 import com.nfcpressure.app.data.PressureData
@@ -35,6 +38,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun MainScreen(
     uiState: UiState,
+    onStartReading: () -> Unit,
+    onStopReading: () -> Unit,
     onSetZeroPoint: () -> Unit,
     onSetReferencePoint: (Float) -> Unit,
     onResetCalibration: () -> Unit,
@@ -57,7 +62,6 @@ fun MainScreen(
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    // NFC状态指示
                     Icon(
                         imageVector = if (uiState.isNfcEnabled) Icons.Default.Wifi 
                                       else Icons.Default.WifiOff,
@@ -74,7 +78,6 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Tab栏
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface
@@ -99,7 +102,6 @@ fun MainScreen(
                 )
             }
             
-            // Tab内容
             AnimatedContent(
                 targetState = selectedTab,
                 transitionSpec = {
@@ -108,7 +110,11 @@ fun MainScreen(
                 label = "tabContent"
             ) { tab ->
                 when (tab) {
-                    0 -> MonitorTab(uiState)
+                    0 -> MonitorTab(
+                        uiState = uiState,
+                        onStartReading = onStartReading,
+                        onStopReading = onStopReading
+                    )
                     1 -> CalibrationTab(
                         uiState = uiState,
                         onSetZeroPoint = onSetZeroPoint,
@@ -124,7 +130,6 @@ fun MainScreen(
         }
     }
     
-    // 错误提示Snackbar
     uiState.errorMessage?.let { error ->
         LaunchedEffect(error) {
             delay(3000)
@@ -136,7 +141,11 @@ fun MainScreen(
  * 监测Tab
  */
 @Composable
-private fun MonitorTab(uiState: UiState) {
+private fun MonitorTab(
+    uiState: UiState,
+    onStartReading: () -> Unit,
+    onStopReading: () -> Unit
+) {
     val pressureData = uiState.pressureData
     
     Column(
@@ -145,11 +154,11 @@ private fun MonitorTab(uiState: UiState) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 提示区域 - 显示仪表盘和读取按钮
+        // 未读取状态
         if (pressureData == null && !uiState.isReading) {
             Spacer(modifier = Modifier.height(16.dp))
             
-            // 仪表盘（显示空状态）
+            // 仪表盘（空状态，指针在0）
             PressureGauge(
                 pressure = -1f,
                 modifier = Modifier.size(260.dp)
@@ -157,9 +166,9 @@ private fun MonitorTab(uiState: UiState) {
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            // 蓝色大圆角按钮
+            // 蓝色大圆角按钮 — 点击开始主动读取
             Button(
-                onClick = { /* NFC自动读取，按钮仅做视觉引导 */ },
+                onClick = onStartReading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -168,6 +177,13 @@ private fun MonitorTab(uiState: UiState) {
                     containerColor = Color(0xFF2196F3)
                 )
             ) {
+                Icon(
+                    imageVector = Icons.Default.Nfc,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "读取NFC标签",
                     style = MaterialTheme.typography.titleMedium.copy(
@@ -179,7 +195,6 @@ private fun MonitorTab(uiState: UiState) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // NFC提示图标
             Icon(
                 imageVector = Icons.Default.PhoneAndroid,
                 contentDescription = null,
@@ -190,7 +205,7 @@ private fun MonitorTab(uiState: UiState) {
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "将手机贴近NFC标签",
+                text = "点击按钮后将手机贴近NFC标签",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = TextAlign.Center
@@ -210,9 +225,19 @@ private fun MonitorTab(uiState: UiState) {
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "正在读取...",
+                text = "正在读取，请将手机贴近NFC标签...",
                 style = MaterialTheme.typography.bodyLarge
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // 取消按钮
+            OutlinedButton(
+                onClick = onStopReading,
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text("取消")
+            }
             
             Spacer(modifier = Modifier.weight(1f))
         }
@@ -221,7 +246,6 @@ private fun MonitorTab(uiState: UiState) {
         if (pressureData != null && !uiState.isReading) {
             Spacer(modifier = Modifier.height(16.dp))
             
-            // 仪表盘
             PressureGauge(
                 pressure = pressureData.pressureMmHg,
                 modifier = Modifier.size(260.dp)
@@ -239,102 +263,36 @@ private fun MonitorTab(uiState: UiState) {
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    // 状态行
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (pressureData.isValid) StatusValid 
-                                        else StatusInvalid
-                                    )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (pressureData.isValid) "数据有效" else "数据无效",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (pressureData.isValid) StatusValid else StatusInvalid
-                            )
-                        }
-                        
-                        // 电池指示
-                        val batteryText = when (pressureData.batteryIndicator) {
-                            1 -> "2.5V"
-                            2 -> "3.0V"
-                            3 -> "3.3V"
-                            else -> "未知"
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.BatteryStd,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = batteryText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Divider()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // 详细数据
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        DataItem(
-                            label = "ADC原始值",
-                            value = pressureData.adcRaw.toString(),
-                            suffix = "/4095"
+                        Text(
+                            text = "压力数据",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
-                        DataItem(
-                            label = "FSR阻值",
-                            value = pressureData.formattedResistance,
-                            suffix = ""
+                        AssistChip(
+                            onClick = { onStartReading() },
+                            label = { Text("重新读取") },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         )
                     }
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        DataItem(
-                            label = "ADC百分比",
-                            value = String.format("%.1f", pressureData.adcPercentage),
-                            suffix = "%"
-                        )
-                        DataItem(
-                            label = "力值",
-                            value = String.format("%.2f", pressureData.forceNewton),
-                            suffix = "N"
-                        )
-                    }
+                    DataItem("压力", String.format("%.1f", pressureData.pressureMmHg), "mmHg")
+                    DataItem("力", String.format("%.2f", pressureData.forceNewton), "N")
+                    DataItem("FSR阻值", pressureData.formattedResistance, "")
+                    DataItem("ADC原始值", "${pressureData.adcRaw}", "(${String.format("%.1f", pressureData.adcPercentage)}%)")
                 }
-            }
-            
-            // UID信息
-            uiState.rawData?.let { raw ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "标签UID: ${raw.uidHex}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
             }
             
             Spacer(modifier = Modifier.weight(1f))
@@ -342,28 +300,20 @@ private fun MonitorTab(uiState: UiState) {
     }
 }
 
-/**
- * 数据项
- */
 @Composable
-private fun DataItem(
-    label: String,
-    value: String,
-    suffix: String,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+private fun DataItem(label: String, value: String, suffix: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )
-        Row(
-            verticalAlignment = Alignment.Bottom
-        ) {
+        Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge.copy(
@@ -381,6 +331,17 @@ private fun DataItem(
 }
 
 /**
+ * mmHg ↔ N 换算工具
+ * 基于FSR406面积 3.08 cm² = 3.08e-4 m²
+ * P(Pa) = F(N) / A(m²)
+ * P(mmHg) = P(Pa) / 133.322
+ * 因此 F(N) = P(mmHg) × 133.322 × A(m²) = P(mmHg) × 0.04106
+ *      P(mmHg) = F(N) / (133.322 × A(m²)) = F(N) / 0.04106
+ */
+private const val MMHG_TO_NEWTON = 0.04106f  // mmHg → N（基于3.08cm² FSR面积）
+private const val NEWTON_TO_MMHG = 24.355f   // N → mmHg
+
+/**
  * 校准Tab
  */
 @Composable
@@ -393,6 +354,10 @@ private fun CalibrationTab(
     val calibration = uiState.calibration
     var referencePressure by remember { mutableStateOf("40") }
     var showResetConfirm by remember { mutableStateOf(false) }
+    
+    // 实时换算参考压力对应的力值(N)
+    val refPressureFloat = referencePressure.toFloatOrNull() ?: 40f
+    val refForceNewton = refPressureFloat * MMHG_TO_NEWTON
     
     Column(
         modifier = Modifier
@@ -413,9 +378,42 @@ private fun CalibrationTab(
             color = Color.Gray
         )
         
-        Spacer(modifier = Modifier.height(24.dp))
+        // mmHg ↔ N 换算说明
+        Spacer(modifier = Modifier.height(12.dp))
         
-        // 校准步骤
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF5F5F5)
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = "单位换算（基于FSR406面积3.08cm²）",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF666666)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "1 mmHg ≈ 0.041 N  ｜  1 N ≈ 24.4 mmHg",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF888888)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "常用参考：40 mmHg ≈ 1.64 N  ｜  30 mmHg ≈ 1.23 N  ｜  60 mmHg ≈ 2.46 N",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFF888888)
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(20.dp))
+        
+        // 校准步骤1：设置零点
         CalibrationStepCard(
             stepNumber = 1,
             title = "设置零点",
@@ -429,10 +427,11 @@ private fun CalibrationTab(
         
         Spacer(modifier = Modifier.height(16.dp))
         
+        // 校准步骤2：设置参考点
         CalibrationStepCard(
             stepNumber = 2,
             title = "设置参考点",
-            description = "施加已知压力（建议40mmHg）后输入实际压力值并点击",
+            description = "施加已知压力后输入实际压力值并点击",
             isCompleted = calibration.isCalibrated,
             isEnabled = calibration.zeroAdc >= 0 && uiState.pressureData != null,
             buttonText = if (calibration.isCalibrated) "已设置" else "设置参考",
@@ -441,7 +440,7 @@ private fun CalibrationTab(
                 onSetReferencePoint(pressure)
             }
         ) {
-            // 参考压力输入
+            // 参考压力输入（字体缩小）
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -450,24 +449,39 @@ private fun CalibrationTab(
             ) {
                 Text(
                     text = "参考压力:",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodySmall
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedTextField(
                     value = referencePressure,
                     onValueChange = { referencePressure = it.filter { c -> c.isDigit() || c == '.' } },
-                    modifier = Modifier.width(100.dp),
+                    modifier = Modifier.width(90.dp),
+                    textStyle = LocalTextStyle.current.copy(
+                        fontSize = 13.sp
+                    ),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
-                    suffix = { Text("mmHg") },
+                    suffix = { 
+                        Text(
+                            "mmHg",
+                            style = MaterialTheme.typography.labelSmall
+                        ) 
+                    },
                     enabled = !calibration.isCalibrated
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                // 实时换算显示
+                Text(
+                    text = "≈ ${String.format("%.2f", refForceNewton)} N",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF666666)
                 )
             }
         }
         
         Spacer(modifier = Modifier.weight(1f))
         
-        // 校准状态和重置
+        // 校准完成状态
         if (calibration.isCalibrated) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -537,7 +551,6 @@ private fun CalibrationTab(
         }
     }
     
-    // 重置确认对话框
     if (showResetConfirm) {
         AlertDialog(
             onDismissRequest = { showResetConfirm = false },
@@ -562,9 +575,6 @@ private fun CalibrationTab(
     }
 }
 
-/**
- * 校准步骤卡片
- */
 @Composable
 private fun CalibrationStepCard(
     stepNumber: Int,
@@ -591,7 +601,6 @@ private fun CalibrationStepCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 步骤编号
                 Box(
                     modifier = Modifier
                         .size(28.dp)
@@ -634,7 +643,6 @@ private fun CalibrationStepCard(
                 }
             }
             
-            // 当前值显示
             currentValue?.let {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -644,10 +652,8 @@ private fun CalibrationStepCard(
                 )
             }
             
-            // 额外内容
             content?.invoke()
             
-            // 按钮
             if (!isCompleted) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
@@ -707,7 +713,6 @@ private fun HistoryTab(
         }
     }
     
-    // 清除确认对话框
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
